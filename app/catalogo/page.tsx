@@ -1,12 +1,38 @@
 'use client'
 import { useState } from 'react'
 
-export default function Catalogo() {
-  const [filtroCategoria, setFiltroCategoria] = useState('todos')
-  const [carritoVisible, setCarritoVisible] = useState(false)
-  const [carrito, setCarrito] = useState([])
+// Definir tipos
+interface Producto {
+  id: number;
+  nombre: string;
+  categoria: string;
+  genero: string;
+  precio: number;
+  colores: string[];
+  tallas: string[];
+  descripcion: string;
+  imagen: string;
+  material: string;
+}
 
-  const productos = [
+interface ItemCarrito extends Producto {
+  colorSeleccionado: string;
+  tallaSeleccionada: string;
+  cantidad: number;
+}
+
+interface ProductCardProps {
+  producto: Producto;
+  onAgregar: (producto: Producto, color: string, talla: string) => void;
+  getColorClass: (color: string) => string;
+}
+
+export default function Catalogo() {
+  const [filtroCategoria, setFiltroCategoria] = useState<string>('todos')
+  const [carritoVisible, setCarritoVisible] = useState<boolean>(false)
+  const [carrito, setCarrito] = useState<ItemCarrito[]>([])
+
+  const productos: Producto[] = [
     // CAMISETAS
     {
       id: 1,
@@ -64,20 +90,20 @@ export default function Catalogo() {
     return producto.categoria === filtroCategoria
   })
 
-  const agregarAlCarrito = (producto, color, talla) => {
-    const itemCarrito = {
+  const agregarAlCarrito = (producto: Producto, color: string, talla: string): void => {
+    const itemCarrito: ItemCarrito = {
       ...producto,
       colorSeleccionado: color,
       tallaSeleccionada: talla,
       cantidad: 1,
-      id: `${producto.id}-${color}-${talla}`
+      id: Date.now() // Usar timestamp como ID único
     }
     setCarrito([...carrito, itemCarrito])
     alert(`${producto.nombre} agregado al carrito`)
   }
 
-  const getColorClass = (color) => {
-    const colorMap = {
+  const getColorClass = (color: string): string => {
+    const colorMap: { [key: string]: string } = {
       'Negro': 'bg-black',
       'Verde': 'bg-green-600',
       'Marfil': 'bg-yellow-100',
@@ -209,6 +235,7 @@ export default function Catalogo() {
             <a 
               href="https://instagram.com/dinanbasic" 
               target="_blank"
+              rel="noopener noreferrer"
               className="flex items-center justify-center bg-pink-600 hover:bg-pink-700 text-white py-3 px-6 rounded-full transition"
             >
               <span className="mr-3">📱</span>
@@ -217,6 +244,7 @@ export default function Catalogo() {
             <a 
               href="https://tiktok.com/@dinanbasic" 
               target="_blank"
+              rel="noopener noreferrer"
               className="flex items-center justify-center bg-gray-800 hover:bg-gray-900 text-white py-3 px-6 rounded-full transition"
             >
               <span className="mr-3">🎵</span>
@@ -225,6 +253,7 @@ export default function Catalogo() {
             <a 
               href="https://wa.me/573243893455" 
               target="_blank"
+              rel="noopener noreferrer"
               className="flex items-center justify-center bg-green-600 hover:bg-green-700 text-white py-3 px-6 rounded-full transition"
             >
               <span className="mr-3">💬</span>
@@ -238,9 +267,9 @@ export default function Catalogo() {
 }
 
 // Componente separado para cada producto
-function ProductCard({ producto, onAgregar, getColorClass }) {
-  const [colorSeleccionado, setColorSeleccionado] = useState(producto.colores[0])
-  const [tallaSeleccionada, setTallaSeleccionada] = useState(producto.tallas[0])
+function ProductCard({ producto, onAgregar, getColorClass }: ProductCardProps) {
+  const [colorSeleccionado, setColorSeleccionado] = useState<string>(producto.colores[0])
+  const [tallaSeleccionada, setTallaSeleccionada] = useState<string>(producto.tallas[0])
 
   return (
     <div className="bg-white rounded-lg overflow-hidden shadow-lg hover:shadow-xl transition-shadow">
@@ -271,7 +300,7 @@ function ProductCard({ producto, onAgregar, getColorClass }) {
         <div className="mb-4">
           <p className="font-medium mb-2">Color:</p>
           <div className="flex gap-2">
-            {producto.colores.map(color => (
+            {producto.colores.map((color: string) => (
               <button
                 key={color}
                 onClick={() => setColorSeleccionado(color)}
@@ -289,7 +318,7 @@ function ProductCard({ producto, onAgregar, getColorClass }) {
         <div className="mb-6">
           <p className="font-medium mb-2">Talla:</p>
           <div className="flex gap-2 flex-wrap">
-            {producto.tallas.map(talla => (
+            {producto.tallas.map((talla: string) => (
               <button
                 key={talla}
                 onClick={() => setTallaSeleccionada(talla)}
