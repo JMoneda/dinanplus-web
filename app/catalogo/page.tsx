@@ -1,105 +1,64 @@
 'use client'
 import { useState } from 'react'
-
-// Definir tipos
-interface Producto {
-  id: number;
-  nombre: string;
-  categoria: string;
-  genero: string;
-  precio: number;
-  colores: string[];
-  tallas: string[];
-  descripcion: string;
-  imagen: string;
-  material: string;
-}
-
-interface ItemCarrito extends Producto {
-  colorSeleccionado: string;
-  tallaSeleccionada: string;
-  cantidad: number;
-}
+import { useProductos } from '@/hooks/useProductos'
+import { useCarrito } from '@/context/CarritoContext'
+import type { Producto } from '@/lib/supabase'
 
 interface ProductCardProps {
-  producto: Producto;
-  onAgregar: (producto: Producto, color: string, talla: string) => void;
-  getColorClass: (color: string) => string;
+  producto: Producto
+  onAgregar: (producto: Producto, color: string, talla: string) => void
+  getColorClass: (color: string) => string
 }
 
 export default function Catalogo() {
+  const { productos, loading, error } = useProductos()
+  const { agregarItem } = useCarrito()
   const [filtroCategoria, setFiltroCategoria] = useState<string>('todos')
-  const [carritoVisible, setCarritoVisible] = useState<boolean>(false)
-  const [carrito, setCarrito] = useState<ItemCarrito[]>([])
 
-  const productos: Producto[] = [
-    // CAMISETAS
-    {
-      id: 1,
-      nombre: "Camiseta DINAN+ Hombre",
-      categoria: "camisetas",
-      genero: "hombre",
-      precio: 64900,
-      colores: ["Negro", "Verde", "Marfil", "Mocca"],
-      tallas: ["S", "M", "L", "XL", "XXL"],
-      descripcion: "Prendas elaboradas en algodón 100%, cómoda fresca y versátil. Básicos que siempre combinan con todo.",
-      imagen: "/camiseta-hombre.jpg",
-      material: "96% algodón, 4% elastano"
-    },
-    {
-      id: 2,
-      nombre: "Camiseta DINAN+ Dama",
-      categoria: "camisetas",
-      genero: "mujer",
-      precio: 64900,
-      colores: ["Negro", "Verde", "Marfil", "Mocca"],
-      tallas: ["S", "M", "L", "XL", "XXL"],
-      descripcion: "Prendas elaboradas en algodón 100%, cómoda fresca y versátil. Básicos que siempre combinan con todo.",
-      imagen: "/camiseta-mujer.jpg",
-      material: "96% algodón, 4% elastano"
-    },
-    // CHOMPAS/HOODIES
-    {
-      id: 3,
-      nombre: "Chompa DINAN+ Hombre",
-      categoria: "chompas",
-      genero: "hombre",
-      precio: 124900,
-      colores: ["Negro", "Verde", "Marfil", "Mocca"],
-      tallas: ["S", "M", "L", "XL", "XXL"],
-      descripcion: "Prendas elaboradas en 96% algodón y 4% elastano, por eso son cómodas, duraderas y se ajustan sin incomodar. Perfectas para usar todos los días.",
-      imagen: "/chompa-hombre.jpg",
-      material: "96% algodón, 4% elastano"
-    },
-    {
-      id: 4,
-      nombre: "Chompa DINAN+ Dama",
-      categoria: "chompas",
-      genero: "mujer",
-      precio: 124900,
-      colores: ["Negro", "Verde", "Marfil", "Mocca"],
-      tallas: ["S", "M", "L", "XL", "XXL"],
-      descripcion: "Prendas elaboradas en 96% algodón y 4% elastano, por eso son cómodas, duraderas y se ajustan sin incomodar. Perfectas para usar todos los días.",
-      imagen: "/chompa-mujer.jpg",
-      material: "96% algodón, 4% elastano"
-    }
-  ]
+  // Mostrar estados de carga
+  if (loading) {
+    return (
+      <div className="bg-gray-50 min-h-screen">
+        <section className="bg-black text-white py-20">
+          <div className="container mx-auto px-6 text-center">
+            <h1 className="text-4xl md:text-6xl font-bold mb-4">DINAN+</h1>
+            <p className="text-xl">Cargando productos...</p>
+          </div>
+        </section>
+        <div className="flex justify-center items-center py-20">
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-black"></div>
+        </div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="bg-gray-50 min-h-screen">
+        <section className="bg-red-600 text-white py-20">
+          <div className="container mx-auto px-6 text-center">
+            <h1 className="text-4xl font-bold mb-4">Error</h1>
+            <p className="text-xl">No se pudieron cargar los productos</p>
+            <p className="text-lg mt-4">Error: {error}</p>
+            <button 
+              onClick={() => window.location.reload()} 
+              className="mt-4 bg-white text-red-600 px-6 py-3 rounded-full font-semibold"
+            >
+              Reintentar
+            </button>
+          </div>
+        </section>
+      </div>
+    )
+  }
 
   const productosFiltrados = productos.filter(producto => {
     if (filtroCategoria === 'todos') return true
     return producto.categoria === filtroCategoria
   })
 
-  const agregarAlCarrito = (producto: Producto, color: string, talla: string): void => {
-    const itemCarrito: ItemCarrito = {
-      ...producto,
-      colorSeleccionado: color,
-      tallaSeleccionada: talla,
-      cantidad: 1,
-      id: Date.now() // Usar timestamp como ID único
-    }
-    setCarrito([...carrito, itemCarrito])
-    alert(`${producto.nombre} agregado al carrito`)
+  const manejarAgregarAlCarrito = (producto: Producto, color: string, talla: string): void => {
+    agregarItem(producto, color, talla)
   }
 
   const getColorClass = (color: string): string => {
@@ -111,6 +70,9 @@ export default function Catalogo() {
     }
     return colorMap[color] || 'bg-gray-400'
   }
+
+  // Obtener categorías únicas de los productos
+  const categorias = [...new Set(productos.map(p => p.categoria))]
 
   return (
     <div className="bg-gray-50 min-h-screen">
@@ -127,6 +89,9 @@ export default function Catalogo() {
             Versátiles: combinan con cualquier estilo. Cómodas: frescas y suaves gracias al algodón de alta calidad. 
             Duraderas: no se deforman después de pocas lavadas. Para todos: tallas desde S hasta XXL.
           </p>
+          <div className="mt-6 text-sm text-gray-300">
+            {productos.length} productos disponibles
+          </div>
         </div>
       </section>
 
@@ -142,28 +107,24 @@ export default function Catalogo() {
                   : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
               }`}
             >
-              Todos los productos
+              Todos ({productos.length})
             </button>
-            <button
-              onClick={() => setFiltroCategoria('camisetas')}
-              className={`px-6 py-3 rounded-full font-medium transition ${
-                filtroCategoria === 'camisetas' 
-                  ? 'bg-black text-white' 
-                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-              }`}
-            >
-              Camisetas
-            </button>
-            <button
-              onClick={() => setFiltroCategoria('chompas')}
-              className={`px-6 py-3 rounded-full font-medium transition ${
-                filtroCategoria === 'chompas' 
-                  ? 'bg-black text-white' 
-                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-              }`}
-            >
-              Chompas
-            </button>
+            {categorias.map(categoria => {
+              const count = productos.filter(p => p.categoria === categoria).length
+              return (
+                <button
+                  key={categoria}
+                  onClick={() => setFiltroCategoria(categoria)}
+                  className={`px-6 py-3 rounded-full font-medium transition capitalize ${
+                    filtroCategoria === categoria 
+                      ? 'bg-black text-white' 
+                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                  }`}
+                >
+                  {categoria} ({count})
+                </button>
+              )
+            })}
           </div>
         </div>
       </section>
@@ -171,16 +132,30 @@ export default function Catalogo() {
       {/* Productos */}
       <section className="py-20">
         <div className="container mx-auto px-6">
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {productosFiltrados.map(producto => (
-              <ProductCard 
-                key={producto.id} 
-                producto={producto} 
-                onAgregar={agregarAlCarrito}
-                getColorClass={getColorClass}
-              />
-            ))}
-          </div>
+          {productosFiltrados.length === 0 ? (
+            <div className="text-center py-20">
+              <h3 className="text-2xl font-bold text-gray-600 mb-4">
+                No hay productos en esta categoría
+              </h3>
+              <button
+                onClick={() => setFiltroCategoria('todos')}
+                className="bg-black text-white px-6 py-3 rounded-full"
+              >
+                Ver todos los productos
+              </button>
+            </div>
+          ) : (
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {productosFiltrados.map(producto => (
+                <ProductCard 
+                  key={producto.id} 
+                  producto={producto} 
+                  onAgregar={manejarAgregarAlCarrito}
+                  getColorClass={getColorClass}
+                />
+              ))}
+            </div>
+          )}
         </div>
       </section>
 
@@ -283,6 +258,13 @@ function ProductCard({ producto, onAgregar, getColorClass }: ProductCardProps) {
             DINAN+
           </span>
         </div>
+        {producto.stock <= 5 && (
+          <div className="absolute top-4 left-4">
+            <span className="bg-red-600 text-white px-2 py-1 rounded text-xs">
+              Pocas unidades
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Información del producto */}
@@ -338,14 +320,16 @@ function ProductCard({ producto, onAgregar, getColorClass }: ProductCardProps) {
         <button
           onClick={() => onAgregar(producto, colorSeleccionado, tallaSeleccionada)}
           className="w-full bg-black text-white py-3 rounded-lg font-semibold hover:bg-gray-800 transition"
+          disabled={producto.stock === 0}
         >
-          Agregar al Carrito
+          {producto.stock === 0 ? 'Sin Stock' : 'Agregar al Carrito'}
         </button>
 
-        {/* Material */}
-        <p className="text-xs text-gray-500 mt-2 text-center">
-          {producto.material}
-        </p>
+        {/* Material y stock */}
+        <div className="mt-2 text-xs text-gray-500 text-center space-y-1">
+          <p>{producto.material}</p>
+          <p>Stock disponible: {producto.stock} unidades</p>
+        </div>
       </div>
     </div>
   )
