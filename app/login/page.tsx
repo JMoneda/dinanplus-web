@@ -18,7 +18,7 @@ export default function LoginPage() {
 
     try {
       const { error } = await signIn(email, password)
-      
+
       if (error) {
         addToast('Credenciales incorrectas', 'error')
       } else {
@@ -26,10 +26,12 @@ export default function LoginPage() {
         router.push('/admin')
       }
     } catch (error) {
+      console.error('Error al intentar iniciar sesión:', error) 
       addToast('Error de conexión', 'error')
     } finally {
       setLoading(false)
     }
+
   }
 
   return (

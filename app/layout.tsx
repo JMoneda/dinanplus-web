@@ -52,13 +52,31 @@ export default function RootLayout({
                   <p>© {new Date().getFullYear()} DINAN+. Todos los derechos reservados.</p>
                   <p className="mt-2">
                     Síguenos en{" "}
-                    
-                      href="https://www.instagram.com/dinanplus"
+                    <a
+                      href="https://www.instagram.com/dinanbasic"
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-white hover:text-gray-300"
-                    <a>
+                    >
                       Instagram
+                    </a>
+                    ,{" "}
+                    <a
+                      href="https://www.tiktok.com/@dinanbasic"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-white hover:text-gray-300"
+                    >
+                      TikTok
+                    </a>
+                    {" "}y{" "}
+                    <a
+                      href="https://wa.me/573243893455"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-white hover:text-gray-300"
+                    >
+                      WhatsApp
                     </a>
                   </p>
                 </div>
