@@ -31,9 +31,9 @@ export default function RootLayout({
                     <Link href="/" className="hover:text-gray-400 transition">
                       Inicio
                     </Link>
-                    <Link href="/servicios" className="hover:text-gray-400 transition">
+                    {/* <Link href="/servicios" className="hover:text-gray-400 transition">
                       Servicios
-                    </Link>
+                    </Link> */}
                     <Link href="/catalogo" className="hover:text-gray-400 transition">
                       DINAN+
                     </Link>

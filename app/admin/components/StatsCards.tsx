@@ -30,7 +30,7 @@ export default function StatsCards({ pedidos, variantes, loading }: StatsCardsPr
     .filter(p => p.estado !== 'cancelado')
     .reduce((sum, p) => sum + p.total, 0)
   
-  const pedidosPendientes = pedidos.filter(p => p.estado === 'pendiente').length
+  const pedidosPendientes = pedidos.filter(p => p.estado === 'pendiente' || p.estado === 'revision').length
   const variantesBajoStock = variantes.filter(v => v.stock <= 5).length
 
   return (
@@ -68,7 +68,7 @@ export default function StatsCards({ pedidos, variantes, loading }: StatsCardsPr
             <span className="text-yellow-600 text-xl">⏳</span>
           </div>
           <div className="ml-4">
-            <p className="text-sm font-medium text-gray-600">Pendientes</p>
+            <p className="text-sm font-medium text-gray-600">Pendientes + revision</p>
             <p className="text-2xl font-bold text-gray-900">{pedidosPendientes}</p>
           </div>
         </div>

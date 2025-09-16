@@ -3,6 +3,13 @@ import { useState } from 'react'
 import { useCarrito } from '@/context/CarritoContext'
 import { supabase } from '@/lib/supabase'
 import Link from 'next/link'
+import { 
+  validarFormulario, 
+  verificarLimitePedidos, 
+  registrarPedido,
+  analizarSospechoso,
+  ErroresValidacion
+} from '@/utils/validaciones'
 
 interface FormularioCliente {
   nombre: string
@@ -26,25 +33,23 @@ export default function CheckoutPage() {
     metodo_pago: 'contraentrega'
   })
   
+  const [errores, setErrores] = useState<ErroresValidacion>({})
   const [loading, setLoading] = useState(false)
   const [pedidoCompletado, setPedidoCompletado] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [mostrandoAdvertencia, setMostrandoAdvertencia] = useState(false)
 
-  // Redirigir si el carrito está vacío
-  if (state.items.length === 0 && !pedidoCompletado) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <h2 className="text-2xl font-bold text-gray-600 mb-4">Tu carrito está vacío</h2>
-          <Link
-            href="/catalogo"
-            className="bg-black text-white px-6 py-3 rounded-lg hover:bg-gray-800 transition"
-          >
-            Continuar comprando
-          </Link>
-        </div>
-      </div>
-    )
+  // Validación en tiempo real
+  const validarCampo = (nombre: keyof FormularioCliente, valor: string) => {
+    const validacionTemp = validarFormulario({
+      ...formulario,
+      [nombre]: valor
+    })
+    
+    setErrores(prev => ({
+      ...prev,
+      [nombre]: validacionTemp.errores[nombre as keyof ErroresValidacion]
+    }))
   }
 
   const manejarCambio = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -53,6 +58,33 @@ export default function CheckoutPage() {
       ...prev,
       [name]: value
     }))
+    
+    // Limpiar error del campo cuando el usuario empiece a escribir
+    if (errores[name as keyof ErroresValidacion]) {
+      setErrores(prev => ({
+        ...prev,
+        [name]: undefined
+      }))
+    }
+    
+    // Validar en tiempo real después de que el usuario deje de escribir
+    setTimeout(() => {
+      validarCampo(name as keyof FormularioCliente, value)
+    }, 500)
+  }
+
+  const formatearTelefono = (telefono: string): string => {
+    // Limpiar el teléfono
+    const limpio = telefono.replace(/[^0-9]/g, '')
+    
+    // Formatear según longitud
+    if (limpio.length <= 10) {
+      if (limpio.length >= 7) {
+        return limpio.replace(/(\d{3})(\d{3})(\d{4})/, '$1 $2 $3')
+      }
+    }
+    
+    return limpio
   }
 
   const generarNumeroPedido = (): string => {
@@ -63,26 +95,57 @@ export default function CheckoutPage() {
 
   const enviarPedido = async (e: React.FormEvent) => {
     e.preventDefault()
-    setLoading(true)
     setError(null)
+
+    // Verificar límite de pedidos
+    const { permitido, mensaje } = verificarLimitePedidos()
+    if (!permitido) {
+      setError(mensaje || 'Límite de pedidos alcanzado')
+      return
+    }
+
+    // Validar formulario completo
+    const validacion = validarFormulario(formulario)
+    if (!validacion.esValido) {
+      setErrores(validacion.errores)
+      setError('Por favor corrige los errores en el formulario')
+      return
+    }
+
+    // Analizar si el pedido es sospechoso
+    const analisisSospechoso = analizarSospechoso({
+      ...formulario,
+      total: state.total
+    })
+
+    if (analisisSospechoso.sospechoso && !mostrandoAdvertencia) {
+      setMostrandoAdvertencia(true)
+      setError(`Advertencia: ${analisisSospechoso.razones.join(', ')}. Si la información es correcta, haz clic en "Confirmar Pedido" nuevamente.`)
+      return
+    }
+
+    setLoading(true)
 
     try {
       const numeroPedido = generarNumeroPedido()
+      
+      // Formatear teléfono antes de guardar
+      const telefonoFormateado = formulario.telefono.replace(/[^0-9]/g, '')
 
       // Crear pedido en Supabase
       const { data: pedido, error: errorPedido } = await supabase
         .from('pedidos')
         .insert({
           numero_pedido: numeroPedido,
-          cliente_nombre: formulario.nombre,
-          cliente_email: formulario.email,
-          cliente_telefono: formulario.telefono,
-          cliente_direccion: formulario.direccion,
-          ciudad: formulario.ciudad,
+          cliente_nombre: formulario.nombre.trim(),
+          cliente_email: formulario.email.toLowerCase().trim(),
+          cliente_telefono: telefonoFormateado,
+          cliente_direccion: formulario.direccion.trim(),
+          ciudad: formulario.ciudad.trim(),
           total: state.total,
-          estado: 'pendiente',
+          estado: analisisSospechoso.sospechoso ? 'revision' : 'pendiente', // Marcar como "revisión" si es sospechoso
           metodo_pago: formulario.metodo_pago,
-          notas: formulario.notas
+          notas: formulario.notas.trim()
         })
         .select()
         .single()
@@ -107,11 +170,14 @@ export default function CheckoutPage() {
 
       if (errorItems) throw errorItems
 
+      // Registrar pedido para control anti-spam
+      registrarPedido()
+
       // Limpiar carrito
       limpiarCarrito()
       setPedidoCompletado(numeroPedido)
 
-      // Enviar por WhatsApp (opcional)
+      // Enviar por WhatsApp
       if (formulario.telefono) {
         enviarWhatsApp(numeroPedido, formulario, state)
       }
@@ -152,6 +218,23 @@ ${cliente.notas ? `📝 *Notas:* ${cliente.notas}` : ''}
 
     // Abrir WhatsApp
     window.open(`https://wa.me/573243893455?text=${mensaje}`, '_blank')
+  }
+
+  // Redirigir si el carrito está vacío
+  if (state.items.length === 0 && !pedidoCompletado) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold text-gray-600 mb-4">Tu carrito está vacío</h2>
+          <Link
+            href="/catalogo"
+            className="bg-black text-white px-6 py-3 rounded-lg hover:bg-gray-800 transition"
+          >
+            Continuar comprando
+          </Link>
+        </div>
+      </div>
+    )
   }
 
   // Mostrar confirmación de pedido
@@ -206,12 +289,15 @@ ${cliente.notas ? `📝 *Notas:* ${cliente.notas}` : ''}
               <h2 className="text-xl font-semibold mb-6">Información de Envío</h2>
               
               {error && (
-                <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded mb-6">
+                <div className={`border px-4 py-3 rounded mb-6 ${
+                  mostrandoAdvertencia ? 'bg-yellow-50 border-yellow-200 text-yellow-800' : 'bg-red-50 border-red-200 text-red-600'
+                }`}>
                   {error}
                 </div>
               )}
 
               <form onSubmit={enviarPedido} className="space-y-4">
+                {/* Nombre */}
                 <div>
                   <label htmlFor="nombre" className="block text-sm font-medium text-gray-700 mb-1">
                     Nombre completo *
@@ -222,11 +308,18 @@ ${cliente.notas ? `📝 *Notas:* ${cliente.notas}` : ''}
                     name="nombre"
                     value={formulario.nombre}
                     onChange={manejarCambio}
+                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-black focus:border-transparent ${
+                      errores.nombre ? 'border-red-300' : 'border-gray-300'
+                    }`}
+                    placeholder="Tu nombre completo"
                     required
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent"
                   />
+                  {errores.nombre && (
+                    <p className="text-red-600 text-sm mt-1">{errores.nombre}</p>
+                  )}
                 </div>
 
+                {/* Email */}
                 <div>
                   <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
                     Email *
@@ -237,11 +330,18 @@ ${cliente.notas ? `📝 *Notas:* ${cliente.notas}` : ''}
                     name="email"
                     value={formulario.email}
                     onChange={manejarCambio}
+                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-black focus:border-transparent ${
+                      errores.email ? 'border-red-300' : 'border-gray-300'
+                    }`}
+                    placeholder="tu.email@ejemplo.com"
                     required
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent"
                   />
+                  {errores.email && (
+                    <p className="text-red-600 text-sm mt-1">{errores.email}</p>
+                  )}
                 </div>
 
+                {/* Teléfono */}
                 <div>
                   <label htmlFor="telefono" className="block text-sm font-medium text-gray-700 mb-1">
                     Teléfono/WhatsApp *
@@ -251,13 +351,25 @@ ${cliente.notas ? `📝 *Notas:* ${cliente.notas}` : ''}
                     id="telefono"
                     name="telefono"
                     value={formulario.telefono}
-                    onChange={manejarCambio}
-                    placeholder="Ej: 3001234567"
+                    onChange={(e) => {
+                      const formatted = formatearTelefono(e.target.value)
+                      manejarCambio({ ...e, target: { ...e.target, value: formatted } })
+                    }}
+                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-black focus:border-transparent ${
+                      errores.telefono ? 'border-red-300' : 'border-gray-300'
+                    }`}
+                    placeholder="300 123 4567"
                     required
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent"
                   />
+                  {errores.telefono && (
+                    <p className="text-red-600 text-sm mt-1">{errores.telefono}</p>
+                  )}
+                  <p className="text-xs text-gray-500 mt-1">
+                    Formato: celular (300 123 4567) o fijo (1 234 5678)
+                  </p>
                 </div>
 
+                {/* Dirección */}
                 <div>
                   <label htmlFor="direccion" className="block text-sm font-medium text-gray-700 mb-1">
                     Dirección completa *
@@ -268,12 +380,21 @@ ${cliente.notas ? `📝 *Notas:* ${cliente.notas}` : ''}
                     value={formulario.direccion}
                     onChange={manejarCambio}
                     rows={3}
+                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-black focus:border-transparent ${
+                      errores.direccion ? 'border-red-300' : 'border-gray-300'
+                    }`}
+                    placeholder="Ej: Calle 123 #45-67, Barrio Los Rosales, Torre 3 Apto 301"
                     required
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent"
-                    placeholder="Calle, carrera, número, barrio, referencias..."
                   />
+                  {errores.direccion && (
+                    <p className="text-red-600 text-sm mt-1">{errores.direccion}</p>
+                  )}
+                  <p className="text-xs text-gray-500 mt-1">
+                    Incluye calle, número, barrio y referencias detalladas
+                  </p>
                 </div>
 
+                {/* Ciudad */}
                 <div>
                   <label htmlFor="ciudad" className="block text-sm font-medium text-gray-700 mb-1">
                     Ciudad *
@@ -284,11 +405,18 @@ ${cliente.notas ? `📝 *Notas:* ${cliente.notas}` : ''}
                     name="ciudad"
                     value={formulario.ciudad}
                     onChange={manejarCambio}
+                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-black focus:border-transparent ${
+                      errores.ciudad ? 'border-red-300' : 'border-gray-300'
+                    }`}
+                    placeholder="Ej: Medellín, Bogotá, Cali..."
                     required
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent"
                   />
+                  {errores.ciudad && (
+                    <p className="text-red-600 text-sm mt-1">{errores.ciudad}</p>
+                  )}
                 </div>
 
+                {/* Método de pago */}
                 <div>
                   <label htmlFor="metodo_pago" className="block text-sm font-medium text-gray-700 mb-1">
                     Método de pago
@@ -300,11 +428,31 @@ ${cliente.notas ? `📝 *Notas:* ${cliente.notas}` : ''}
                     onChange={manejarCambio}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent"
                   >
-                    <option value="contraentrega">Contraentrega</option>
+                    <option value="contraentrega">Contraentrega (pago al recibir)</option>
                     <option value="transferencia">Transferencia bancaria</option>
                   </select>
                 </div>
 
+                {/* Información de transferencia */}
+                {formulario.metodo_pago === 'transferencia' && (
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <h4 className="font-semibold text-blue-900 mb-2">📋 Datos para Transferencia:</h4>
+                    <div className="text-sm text-blue-800 space-y-1">
+                      <p><strong>Banco:</strong> Bancolombia</p>
+                      <p><strong>Tipo:</strong> Cuenta de Ahorros</p>
+                      <p><strong>Número:</strong> 1234567890</p>
+                      <p><strong>Titular:</strong> DINAN TEXTILES</p>
+                      <p><strong>Cédula:</strong> 123.456.789</p>
+                    </div>
+                    <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded">
+                      <p className="text-xs text-yellow-800 font-medium">
+                        ⚠️ Importante: Después de transferir, envía el comprobante por WhatsApp al 324 389 3455
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Notas adicionales */}
                 <div>
                   <label htmlFor="notas" className="block text-sm font-medium text-gray-700 mb-1">
                     Notas adicionales (opcional)
@@ -316,22 +464,66 @@ ${cliente.notas ? `📝 *Notas:* ${cliente.notas}` : ''}
                     onChange={manejarCambio}
                     rows={3}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent"
-                    placeholder="Instrucciones especiales, referencias de ubicación..."
+                    placeholder="Instrucciones especiales, referencias de ubicación, horarios de entrega..."
+                    maxLength={500}
                   />
+                  <p className="text-xs text-gray-500 mt-1">
+                    {formulario.notas.length}/500 caracteres
+                  </p>
                 </div>
 
+                {/* Términos y condiciones */}
+                <div className="border-t pt-4">
+                  <label className="flex items-start gap-3">
+                    <input
+                      type="checkbox"
+                      required
+                      className="mt-1 h-4 w-4 text-black focus:ring-black border-gray-300 rounded"
+                    />
+                    <span className="text-sm text-gray-600">
+                      Acepto los{' '}
+                      <a href="#" className="text-black underline hover:no-underline">
+                        términos y condiciones
+                      </a>{' '}
+                      y autorizo el tratamiento de mis datos personales según la{' '}
+                      <a href="#" className="text-black underline hover:no-underline">
+                        política de privacidad
+                      </a>
+                      .
+                    </span>
+                  </label>
+                </div>
+
+                {/* Botón de envío */}
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full bg-black text-white py-3 px-4 rounded-lg font-semibold hover:bg-gray-800 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full bg-black text-white py-3 px-4 rounded-lg font-semibold hover:bg-gray-800 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
-                  {loading ? 'Procesando pedido...' : 'Confirmar Pedido'}
+                  {loading ? (
+                    <>
+                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                      Procesando pedido...
+                    </>
+                  ) : (
+                    'Confirmar Pedido'
+                  )}
                 </button>
+
+                {/* Información de seguridad */}
+                <div className="text-center">
+                  <div className="inline-flex items-center gap-2 text-sm text-gray-500 bg-gray-50 px-4 py-2 rounded-full">
+                    <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    Información protegida y segura
+                  </div>
+                </div>
               </form>
             </div>
 
             {/* Resumen del pedido */}
-            <div className="bg-white rounded-lg shadow p-6">
+            <div className="bg-white rounded-lg shadow p-6 h-fit">
               <h2 className="text-xl font-semibold mb-6">Resumen del Pedido</h2>
               
               <div className="space-y-4 mb-6">
@@ -355,13 +547,13 @@ ${cliente.notas ? `📝 *Notas:* ${cliente.notas}` : ''}
               </div>
 
               <div className="border-t pt-4 space-y-2">
-                <div className="flex justify-between">
+                <div className="flex justify-between text-sm">
                   <span>Subtotal:</span>
                   <span>${state.total.toLocaleString()}</span>
                 </div>
-                <div className="flex justify-between">
+                <div className="flex justify-between text-sm">
                   <span>Envío:</span>
-                  <span>Por definir</span>
+                  <span className="text-gray-600">Por calcular</span>
                 </div>
                 <div className="flex justify-between text-lg font-bold border-t pt-2">
                   <span>Total:</span>
@@ -369,9 +561,50 @@ ${cliente.notas ? `📝 *Notas:* ${cliente.notas}` : ''}
                 </div>
               </div>
 
-              <div className="mt-6 text-xs text-gray-500">
-                <p>* El costo de envío se calculará según la ciudad de destino</p>
-                <p>* Los precios incluyen IVA</p>
+              {/* Información adicional */}
+              <div className="mt-6 space-y-3">
+                <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                  <div className="flex items-center gap-2 text-green-800">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                    <span className="text-sm font-medium">Calidad garantizada</span>
+                  </div>
+                  <p className="text-xs text-green-700 mt-1">
+                    Productos 100% algodón, resistentes y duraderos
+                  </p>
+                </div>
+
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                  <div className="flex items-center gap-2 text-blue-800">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10" />
+                    </svg>
+                    <span className="text-sm font-medium">Envíos a toda Colombia</span>
+                  </div>
+                  <p className="text-xs text-blue-700 mt-1">
+                    Tiempo de entrega: 3-5 días hábiles
+                  </p>
+                </div>
+
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                  <div className="flex items-center gap-2 text-yellow-800">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                    </svg>
+                    <span className="text-sm font-medium">Soporte por WhatsApp</span>
+                  </div>
+                  <p className="text-xs text-yellow-700 mt-1">
+                    Disponible de lunes a sábado, 8:00 AM - 6:00 PM
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-6 text-xs text-gray-500 space-y-1">
+                <p>• Los precios incluyen IVA</p>
+                <p>• El costo de envío se calculará según la ciudad</p>
+                <p>• Tiempo de procesamiento: 1-2 días hábiles</p>
+                <p>• Para cambios y devoluciones, consulta nuestras políticas</p>
               </div>
             </div>
           </div>

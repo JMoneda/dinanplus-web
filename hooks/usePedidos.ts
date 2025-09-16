@@ -147,6 +147,7 @@ export function usePedidos() {
     
     return { cambiosRealizados, erroresStock }
   }
+  
 
   const actualizarEstadoPedido = async (pedidoId: number, estadoAnterior: string, nuevoEstado: string) => {
     setUpdating(pedidoId)
@@ -234,4 +235,6 @@ export function usePedidos() {
     actualizarEstadoPedido,
     refetch: cargarPedidos
   }
+
+  
 }

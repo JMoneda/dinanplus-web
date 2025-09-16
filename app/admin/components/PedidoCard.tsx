@@ -9,12 +9,12 @@ interface PedidoCardProps {
   onRefreshData: () => void
 }
 
-export default function PedidoCard({ 
-  pedido, 
-  getStockVariante, 
-  onActualizarEstado, 
+export default function PedidoCard({
+  pedido,
+  getStockVariante,
+  onActualizarEstado,
   onVerDetalle,
-  onRefreshData 
+  onRefreshData
 }: PedidoCardProps) {
   const [updating, setUpdating] = useState(false)
 
@@ -43,12 +43,14 @@ export default function PedidoCard({
       confirmado: 'bg-blue-100 text-blue-800',
       enviado: 'bg-purple-100 text-purple-800',
       entregado: 'bg-green-100 text-green-800',
-      cancelado: 'bg-red-100 text-red-800'
+      cancelado: 'bg-red-100 text-red-800',
+      revision: 'bg-orange-100 text-orange-800' 
     }
-    
+
     return (
       <span className={`px-2 py-1 rounded-full text-xs font-medium ${styles[estado as keyof typeof styles] || 'bg-gray-100 text-gray-800'}`}>
         {estado.charAt(0).toUpperCase() + estado.slice(1)}
+        {estado === 'revision' && ' 🔍'} {/* NUEVO */}
       </span>
     )
   }
@@ -57,13 +59,15 @@ export default function PedidoCard({
   const getEstadosPermitidos = (estadoActual: string): string[] => {
     switch (estadoActual) {
       case 'pendiente':
-        return ['pendiente', 'confirmado', 'cancelado']
+        return ['pendiente', 'revision', 'cancelado']
+      case 'revision':
+        return ['revision', 'confirmado', 'cancelado']  
       case 'confirmado':
         return ['confirmado', 'enviado', 'cancelado']
       case 'enviado':
         return ['enviado', 'entregado', 'cancelado']
       case 'entregado':
-        return ['entregado'] // Estado final
+        return ['entregado'] 
       case 'cancelado':
         return ['cancelado', 'pendiente'] // Solo puede volver a pendiente
       default:
@@ -76,14 +80,14 @@ export default function PedidoCard({
   // Verificar si hay suficiente stock para confirmar el pedido
   const verificarStock = (): { suficiente: boolean; faltantes: string[] } => {
     const faltantes: string[] = []
-    
+
     for (const item of pedido.pedido_items) {
       const stockActual = getStockVariante(item.producto_id, item.color, item.talla)
       if (stockActual < item.cantidad) {
         faltantes.push(`${item.nombre_producto} (${item.color}, ${item.talla}): necesita ${item.cantidad}, disponible ${stockActual}`)
       }
     }
-    
+
     return {
       suficiente: faltantes.length === 0,
       faltantes
@@ -94,7 +98,7 @@ export default function PedidoCard({
 
   return (
     <div className="border rounded-lg p-4 hover:shadow-md transition-shadow">
-      <div 
+      <div
         className="cursor-pointer"
         onClick={onVerDetalle}
       >
@@ -127,28 +131,26 @@ export default function PedidoCard({
             <p className="text-sm text-gray-500">{pedido.metodo_pago}</p>
           </div>
         </div>
-        
+
         {/* Items del pedido con stock actual */}
         <div className="mt-3 pt-3 border-t">
           <div className="grid gap-2">
             {pedido.pedido_items.map((item, index) => {
               const stockActual = getStockVariante(item.producto_id, item.color, item.talla)
               const stockInsuficiente = stockActual < item.cantidad
-              
+
               return (
-                <div key={index} className={`flex justify-between items-center text-xs px-2 py-1 rounded ${
-                  stockInsuficiente ? 'bg-red-50' : 'bg-gray-50'
-                }`}>
+                <div key={index} className={`flex justify-between items-center text-xs px-2 py-1 rounded ${stockInsuficiente ? 'bg-red-50' : 'bg-gray-50'
+                  }`}>
                   <span>
                     {item.cantidad}x {item.nombre_producto} ({item.color}, {item.talla})
                   </span>
-                  <span className={`font-medium ${
-                    stockInsuficiente 
-                      ? 'text-red-600' 
-                      : stockActual <= 5 
-                        ? 'text-yellow-600' 
+                  <span className={`font-medium ${stockInsuficiente
+                      ? 'text-red-600'
+                      : stockActual <= 5
+                        ? 'text-yellow-600'
                         : 'text-gray-600'
-                  }`}>
+                    }`}>
                     Stock: {stockActual}
                     {stockInsuficiente && (
                       <span className="text-red-600 ml-1">
@@ -174,7 +176,7 @@ export default function PedidoCard({
           </div>
         )}
       </div>
-      
+
       {/* Acciones */}
       <div className="mt-3 flex gap-2" onClick={(e) => e.stopPropagation()}>
         <select
@@ -184,8 +186,8 @@ export default function PedidoCard({
           className="text-xs border rounded px-2 py-1 disabled:opacity-50"
         >
           {estadosPermitidos.map(estado => (
-            <option 
-              key={estado} 
+            <option
+              key={estado}
               value={estado}
               disabled={estado === 'confirmado' && pedido.estado === 'pendiente' && !stockSuficiente}
             >
@@ -194,7 +196,7 @@ export default function PedidoCard({
             </option>
           ))}
         </select>
-        
+
         <button
           onClick={() => {
             const mensaje = encodeURIComponent(

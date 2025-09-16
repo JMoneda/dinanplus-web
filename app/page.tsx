@@ -9,12 +9,12 @@ export default function Home() {
         Transformamos tus ideas en prendas y accesorios de calidad.
       </p>
       <div className="mt-8 flex gap-4">
-        <a
+        {/* <a
           href="/servicios"
           className="px-6 py-3 bg-black text-white rounded-full font-medium hover:bg-gray-800 transition"
         >
           Nuestros Servicios
-        </a>
+        </a> */}
         <a
           href="/catalogo"
           className="px-6 py-3 bg-gray-200 text-black rounded-full font-medium hover:bg-gray-300 transition"
