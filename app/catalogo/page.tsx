@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { useProductos } from '@/hooks/useProductos'
 import { useCarrito } from '@/context/CarritoContext'
 import type { Producto } from '@/lib/supabase'
+import ProductImage from '@/components/ProductImage'
 
 interface ProductCardProps {
   producto: Producto
@@ -40,8 +41,8 @@ export default function Catalogo() {
             <h1 className="text-4xl font-bold mb-4">Error</h1>
             <p className="text-xl">No se pudieron cargar los productos</p>
             <p className="text-lg mt-4">Error: {error}</p>
-            <button 
-              onClick={() => window.location.reload()} 
+            <button
+              onClick={() => window.location.reload()}
               className="mt-4 bg-white text-red-600 px-6 py-3 rounded-full font-semibold"
             >
               Reintentar
@@ -86,7 +87,7 @@ export default function Catalogo() {
             PRENDAS BÁSICAS
           </h2>
           <p className="text-lg md:text-xl max-w-2xl mx-auto">
-            Versátiles: combinan con cualquier estilo. Cómodas: frescas y suaves gracias al algodón de alta calidad. 
+            Versátiles: combinan con cualquier estilo. Cómodas: frescas y suaves gracias al algodón de alta calidad.
             Duraderas: no se deforman después de pocas lavadas. Para todos: tallas desde S hasta XXL.
           </p>
           <div className="mt-6 text-sm text-gray-300">
@@ -101,11 +102,10 @@ export default function Catalogo() {
           <div className="flex flex-wrap gap-4 justify-center">
             <button
               onClick={() => setFiltroCategoria('todos')}
-              className={`px-6 py-3 rounded-full font-medium transition ${
-                filtroCategoria === 'todos' 
-                  ? 'bg-black text-white' 
+              className={`px-6 py-3 rounded-full font-medium transition ${filtroCategoria === 'todos'
+                  ? 'bg-black text-white'
                   : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-              }`}
+                }`}
             >
               Todos ({productos.length})
             </button>
@@ -115,11 +115,10 @@ export default function Catalogo() {
                 <button
                   key={categoria}
                   onClick={() => setFiltroCategoria(categoria)}
-                  className={`px-6 py-3 rounded-full font-medium transition capitalize ${
-                    filtroCategoria === categoria 
-                      ? 'bg-black text-white' 
+                  className={`px-6 py-3 rounded-full font-medium transition capitalize ${filtroCategoria === categoria
+                      ? 'bg-black text-white'
                       : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                  }`}
+                    }`}
                 >
                   {categoria} ({count})
                 </button>
@@ -147,9 +146,9 @@ export default function Catalogo() {
           ) : (
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
               {productosFiltrados.map(producto => (
-                <ProductCard 
-                  key={producto.id} 
-                  producto={producto} 
+                <ProductCard
+                  key={producto.id}
+                  producto={producto}
                   onAgregar={manejarAgregarAlCarrito}
                   getColorClass={getColorClass}
                 />
@@ -207,31 +206,31 @@ export default function Catalogo() {
             Búscanos en todas las redes sociales como:
           </p>
           <div className="space-y-4 max-w-md mx-auto">
-            <a 
-              href="https://instagram.com/dinanbasic" 
+            <a
+              href="https://instagram.com/dinanbasic"
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center justify-center bg-pink-600 hover:bg-pink-700 text-white py-3 px-6 rounded-full transition"
             >
-              <span className="mr-3">📱</span>
+              <span className="mr-3">Instagram 📱</span>
               @dinanbasic
             </a>
-            <a 
-              href="https://tiktok.com/@dinanbasic" 
+            <a
+              href="https://tiktok.com/@dinanbasic"
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center justify-center bg-gray-800 hover:bg-gray-900 text-white py-3 px-6 rounded-full transition"
             >
-              <span className="mr-3">🎵</span>
+              <span className="mr-3">TikTok 🎵</span>
               @dinanbasic
             </a>
-            <a 
-              href="https://wa.me/573243893455" 
+            <a
+              href="https://wa.me/573243893455"
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center justify-center bg-green-600 hover:bg-green-700 text-white py-3 px-6 rounded-full transition"
             >
-              <span className="mr-3">💬</span>
+              <span className="mr-3">Whatsapp 💬</span>
               3243893455
             </a>
           </div>
@@ -249,19 +248,27 @@ function ProductCard({ producto, onAgregar, getColorClass }: ProductCardProps) {
   return (
     <div className="bg-white rounded-lg overflow-hidden shadow-lg hover:shadow-xl transition-shadow">
       {/* Imagen del producto */}
-      <div className="aspect-square bg-gray-200 relative">
-        <div className="absolute inset-0 flex items-center justify-center text-gray-400">
-          <span className="text-4xl">👕</span>
-        </div>
-        <div className="absolute top-4 right-4">
-          <span className="bg-black text-white px-2 py-1 rounded text-sm font-semibold">
-            DINAN+
-          </span>
-        </div>
-        {producto.stock <= 5 && (
+      <div className="relative">
+        <ProductImage
+          productoId={producto.id}
+          nombreProducto={producto.nombre}
+          colorSeleccionado={colorSeleccionado}
+          coloresDisponibles={producto.colores}
+          size="medium"
+        />
+
+        {/* Mantener indicadores de stock */}
+        {producto.stock <= 5 && producto.stock > 0 && (
           <div className="absolute top-4 left-4">
-            <span className="bg-red-600 text-white px-2 py-1 rounded text-xs">
-              Pocas unidades
+            <span className="bg-yellow-500 text-white px-2 py-1 rounded-full text-xs font-medium">
+              ¡Pocas unidades!
+            </span>
+          </div>
+        )}
+        {producto.stock === 0 && (
+          <div className="absolute top-4 left-4">
+            <span className="bg-red-500 text-white px-2 py-1 rounded-full text-xs font-medium">
+              Agotado
             </span>
           </div>
         )}
@@ -273,7 +280,7 @@ function ProductCard({ producto, onAgregar, getColorClass }: ProductCardProps) {
         <p className="text-2xl font-bold text-gray-900 mb-4">
           ${producto.precio.toLocaleString()}
         </p>
-        
+
         <p className="text-gray-600 text-sm mb-4">
           {producto.descripcion}
         </p>
@@ -286,9 +293,8 @@ function ProductCard({ producto, onAgregar, getColorClass }: ProductCardProps) {
               <button
                 key={color}
                 onClick={() => setColorSeleccionado(color)}
-                className={`w-8 h-8 rounded-full border-2 ${getColorClass(color)} ${
-                  colorSeleccionado === color ? 'border-black' : 'border-gray-300'
-                }`}
+                className={`w-8 h-8 rounded-full border-2 ${getColorClass(color)} ${colorSeleccionado === color ? 'border-black' : 'border-gray-300'
+                  }`}
                 title={color}
               />
             ))}
@@ -304,11 +310,10 @@ function ProductCard({ producto, onAgregar, getColorClass }: ProductCardProps) {
               <button
                 key={talla}
                 onClick={() => setTallaSeleccionada(talla)}
-                className={`px-3 py-1 border rounded ${
-                  tallaSeleccionada === talla 
-                    ? 'bg-black text-white border-black' 
+                className={`px-3 py-1 border rounded ${tallaSeleccionada === talla
+                    ? 'bg-black text-white border-black'
                     : 'bg-white text-gray-700 border-gray-300 hover:border-gray-400'
-                }`}
+                  }`}
               >
                 {talla}
               </button>
