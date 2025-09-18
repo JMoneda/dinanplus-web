@@ -10,13 +10,16 @@ import {
   analizarSospechoso,
   ErroresValidacion
 } from '@/utils/validaciones'
+import { getDepartamentos, getMunicipios } from '@/utils/datosColombiaOptimizado'
 
 interface FormularioCliente {
   nombre: string
   email: string
   telefono: string
   direccion: string
+  departamento: string
   ciudad: string
+  ciudadOtra: string // NUEVO
   notas: string
   metodo_pago: 'contraentrega' | 'transferencia'
 }
@@ -28,7 +31,9 @@ export default function CheckoutPage() {
     email: '',
     telefono: '',
     direccion: '',
+    departamento: '',
     ciudad: '',
+    ciudadOtra: '', // NUEVO: Campo para "otra ciudad"
     notas: '',
     metodo_pago: 'contraentrega'
   })
@@ -38,6 +43,10 @@ export default function CheckoutPage() {
   const [pedidoCompletado, setPedidoCompletado] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [mostrandoAdvertencia, setMostrandoAdvertencia] = useState(false)
+
+  // Obtener datos de departamentos y municipios
+  const departamentos = getDepartamentos()
+  const municipios = formulario.departamento ? getMunicipios(formulario.departamento) : []
 
   // Validación en tiempo real
   const validarCampo = (nombre: keyof FormularioCliente, valor: string) => {
@@ -54,10 +63,44 @@ export default function CheckoutPage() {
 
   const manejarCambio = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target
-    setFormulario(prev => ({
-      ...prev,
-      [name]: value
-    }))
+    
+    // Si cambió el departamento, limpiar la ciudad
+    if (name === 'departamento') {
+      setFormulario(prev => ({
+        ...prev,
+        [name]: value,
+        ciudad: '', // Limpiar ciudad cuando cambia departamento
+        ciudadOtra: '' // Limpiar también campo "otra ciudad"
+      }))
+    } 
+    // Si cambió la ciudad y seleccionó "otra", enfocar en el campo texto
+    else if (name === 'ciudad' && value === 'Otra ciudad (escribir abajo)') {
+      setFormulario(prev => ({
+        ...prev,
+        [name]: value,
+        ciudadOtra: '' // Limpiar el campo para que el usuario escriba
+      }))
+      // Enfocar el campo "otra ciudad" después de un breve delay
+      setTimeout(() => {
+        const otraCiudadField = document.getElementById('ciudadOtra')
+        if (otraCiudadField) {
+          otraCiudadField.focus()
+        }
+      }, 100)
+    }
+    // Si es teléfono, solo permitir números
+    else if (name === 'telefono') {
+      const soloNumeros = value.replace(/[^0-9]/g, '')
+      setFormulario(prev => ({
+        ...prev,
+        [name]: soloNumeros
+      }))
+    } else {
+      setFormulario(prev => ({
+        ...prev,
+        [name]: value
+      }))
+    }
     
     // Limpiar error del campo cuando el usuario empiece a escribir
     if (errores[name as keyof ErroresValidacion]) {
@@ -69,21 +112,15 @@ export default function CheckoutPage() {
     
     // Validar en tiempo real después de que el usuario deje de escribir
     setTimeout(() => {
-      validarCampo(name as keyof FormularioCliente, value)
+      validarCampo(name as keyof FormularioCliente, name === 'telefono' ? value.replace(/[^0-9]/g, '') : value)
     }, 500)
   }
 
   const formatearTelefono = (telefono: string): string => {
-    // Limpiar el teléfono
+    // Limpiar el teléfono (solo números)
     const limpio = telefono.replace(/[^0-9]/g, '')
     
-    // Formatear según longitud
-    if (limpio.length <= 10) {
-      if (limpio.length >= 7) {
-        return limpio.replace(/(\d{3})(\d{3})(\d{4})/, '$1 $2 $3')
-      }
-    }
-    
+    // No formatear mientras está escribiendo, solo devolver los números
     return limpio
   }
 
@@ -105,7 +142,10 @@ export default function CheckoutPage() {
     }
 
     // Validar formulario completo
-    const validacion = validarFormulario(formulario)
+    const validacion = validarFormulario({
+      ...formulario,
+      ciudad: formulario.ciudad // Usamos ciudad en lugar de la validación anterior
+    })
     if (!validacion.esValido) {
       setErrores(validacion.errores)
       setError('Por favor corrige los errores en el formulario')
@@ -141,9 +181,11 @@ export default function CheckoutPage() {
           cliente_email: formulario.email.toLowerCase().trim(),
           cliente_telefono: telefonoFormateado,
           cliente_direccion: formulario.direccion.trim(),
-          ciudad: formulario.ciudad.trim(),
+          ciudad: formulario.ciudad === 'Otra ciudad (escribir abajo)' 
+            ? `${formulario.ciudadOtra.trim()}, ${formulario.departamento}` 
+            : `${formulario.ciudad}, ${formulario.departamento}`, // Formato: "Ciudad, Departamento"
           total: state.total,
-          estado: analisisSospechoso.sospechoso ? 'revision' : 'pendiente', // Marcar como "revisión" si es sospechoso
+          estado: analisisSospechoso.sospechoso ? 'revision' : 'pendiente',
           metodo_pago: formulario.metodo_pago,
           notas: formulario.notas.trim()
         })
@@ -203,7 +245,7 @@ export default function CheckoutPage() {
 📧 *Email:* ${cliente.email}
 📱 *Teléfono:* ${cliente.telefono}
 📍 *Dirección:* ${cliente.direccion}
-🏙️ *Ciudad:* ${cliente.ciudad}
+🏙️ *Ciudad:* ${cliente.ciudad === 'Otra ciudad (escribir abajo)' ? cliente.ciudadOtra : cliente.ciudad}, ${cliente.departamento}
 
 🛒 *Productos:*
 ${resumenPedido}
@@ -311,7 +353,14 @@ ${cliente.notas ? `📝 *Notas:* ${cliente.notas}` : ''}
                     className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-black focus:border-transparent ${
                       errores.nombre ? 'border-red-300' : 'border-gray-300'
                     }`}
+                    style={{
+                      color: '#111827',
+                      backgroundColor: '#ffffff',
+                      WebkitTextFillColor: '#111827',
+                      opacity: 1
+                    }}
                     placeholder="Tu nombre completo"
+                    autoComplete="name"
                     required
                   />
                   {errores.nombre && (
@@ -333,7 +382,14 @@ ${cliente.notas ? `📝 *Notas:* ${cliente.notas}` : ''}
                     className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-black focus:border-transparent ${
                       errores.email ? 'border-red-300' : 'border-gray-300'
                     }`}
+                    style={{
+                      color: '#111827',
+                      backgroundColor: '#ffffff',
+                      WebkitTextFillColor: '#111827',
+                      opacity: 1
+                    }}
                     placeholder="tu.email@ejemplo.com"
+                    autoComplete="email"
                     required
                   />
                   {errores.email && (
@@ -341,7 +397,7 @@ ${cliente.notas ? `📝 *Notas:* ${cliente.notas}` : ''}
                   )}
                 </div>
 
-                {/* Teléfono */}
+                {/* Teléfono - SIMPLIFICADO SIN FORMATEO AUTOMÁTICO */}
                 <div>
                   <label htmlFor="telefono" className="block text-sm font-medium text-gray-700 mb-1">
                     Teléfono/WhatsApp *
@@ -351,23 +407,109 @@ ${cliente.notas ? `📝 *Notas:* ${cliente.notas}` : ''}
                     id="telefono"
                     name="telefono"
                     value={formulario.telefono}
-                    onChange={(e) => {
-                      const formatted = formatearTelefono(e.target.value)
-                      manejarCambio({ ...e, target: { ...e.target, value: formatted } })
-                    }}
+                    onChange={manejarCambio}
                     className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-black focus:border-transparent ${
                       errores.telefono ? 'border-red-300' : 'border-gray-300'
                     }`}
-                    placeholder="300 123 4567"
+                    style={{
+                      color: '#111827',
+                      backgroundColor: '#ffffff',
+                      WebkitTextFillColor: '#111827',
+                      opacity: 1
+                    }}
+                    placeholder="3001234567"
+                    autoComplete="tel"
+                    maxLength={10}
                     required
                   />
                   {errores.telefono && (
                     <p className="text-red-600 text-sm mt-1">{errores.telefono}</p>
                   )}
                   <p className="text-xs text-gray-500 mt-1">
-                    Formato: celular (300 123 4567) o fijo (1 234 5678)
+                    Solo números: celular (3001234567) o fijo Bogotá (1234567)
                   </p>
                 </div>
+
+                {/* Departamento */}
+                <div>
+                  <label htmlFor="departamento" className="block text-sm font-medium text-gray-700 mb-1">
+                    Departamento *
+                  </label>
+                  <select
+                    id="departamento"
+                    name="departamento"
+                    value={formulario.departamento}
+                    onChange={manejarCambio}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 bg-white focus:ring-2 focus:ring-black focus:border-transparent"
+                    required
+                  >
+                    <option value="">Selecciona tu departamento</option>
+                    {departamentos.map((depto) => (
+                      <option key={depto} value={depto}>
+                        {depto}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Ciudad */}
+                <div>
+                  <label htmlFor="ciudad" className="block text-sm font-medium text-gray-700 mb-1">
+                    Ciudad *
+                  </label>
+                  <select
+                    id="ciudad"
+                    name="ciudad"
+                    value={formulario.ciudad}
+                    onChange={manejarCambio}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 bg-white focus:ring-2 focus:ring-black focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
+                    required
+                    disabled={!formulario.departamento}
+                  >
+                    <option value="">
+                      {formulario.departamento ? 'Selecciona tu ciudad' : 'Primero selecciona departamento'}
+                    </option>
+                    {municipios.map((ciudad) => (
+                      <option key={ciudad} value={ciudad}>
+                        {ciudad}
+                      </option>
+                    ))}
+                  </select>
+                  {!formulario.departamento && (
+                    <p className="text-xs text-gray-500 mt-1">
+                      Selecciona un departamento para ver las ciudades disponibles
+                    </p>
+                  )}
+                </div>
+
+                {/* Campo "Otra Ciudad" - Solo aparece si selecciona "Otra ciudad" */}
+                {formulario.ciudad === 'Otra ciudad (escribir abajo)' && (
+                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                    <label htmlFor="ciudadOtra" className="block text-sm font-medium text-gray-700 mb-1">
+                      Escribe tu ciudad/municipio *
+                    </label>
+                    <input
+                      type="text"
+                      id="ciudadOtra"
+                      name="ciudadOtra"
+                      value={formulario.ciudadOtra}
+                      onChange={manejarCambio}
+                      className="w-full px-3 py-2 border border-yellow-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
+                      style={{
+                        color: '#111827',
+                        backgroundColor: '#ffffff',
+                        WebkitTextFillColor: '#111827',
+                        opacity: 1
+                      }}
+                      placeholder="Ej: Villa de Leyva, Zipacón, etc."
+                      autoComplete="address-level2"
+                      required
+                    />
+                    <p className="text-xs text-yellow-700 mt-1">
+                      ✍️ Escribe el nombre exacto de tu ciudad o municipio
+                    </p>
+                  </div>
+                )}
 
                 {/* Dirección */}
                 <div>
@@ -383,7 +525,14 @@ ${cliente.notas ? `📝 *Notas:* ${cliente.notas}` : ''}
                     className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-black focus:border-transparent ${
                       errores.direccion ? 'border-red-300' : 'border-gray-300'
                     }`}
+                    style={{
+                      color: '#111827',
+                      backgroundColor: '#ffffff',
+                      WebkitTextFillColor: '#111827',
+                      opacity: 1
+                    }}
                     placeholder="Ej: Calle 123 #45-67, Barrio Los Rosales, Torre 3 Apto 301"
+                    autoComplete="street-address"
                     required
                   />
                   {errores.direccion && (
@@ -392,28 +541,6 @@ ${cliente.notas ? `📝 *Notas:* ${cliente.notas}` : ''}
                   <p className="text-xs text-gray-500 mt-1">
                     Incluye calle, número, barrio y referencias detalladas
                   </p>
-                </div>
-
-                {/* Ciudad */}
-                <div>
-                  <label htmlFor="ciudad" className="block text-sm font-medium text-gray-700 mb-1">
-                    Ciudad *
-                  </label>
-                  <input
-                    type="text"
-                    id="ciudad"
-                    name="ciudad"
-                    value={formulario.ciudad}
-                    onChange={manejarCambio}
-                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-black focus:border-transparent ${
-                      errores.ciudad ? 'border-red-300' : 'border-gray-300'
-                    }`}
-                    placeholder="Ej: Medellín, Bogotá, Cali..."
-                    required
-                  />
-                  {errores.ciudad && (
-                    <p className="text-red-600 text-sm mt-1">{errores.ciudad}</p>
-                  )}
                 </div>
 
                 {/* Método de pago */}
@@ -426,7 +553,7 @@ ${cliente.notas ? `📝 *Notas:* ${cliente.notas}` : ''}
                     name="metodo_pago"
                     value={formulario.metodo_pago}
                     onChange={manejarCambio}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 bg-white focus:ring-2 focus:ring-black focus:border-transparent"
                   >
                     <option value="contraentrega">Contraentrega (pago al recibir)</option>
                     <option value="transferencia">Transferencia bancaria</option>
@@ -464,6 +591,12 @@ ${cliente.notas ? `📝 *Notas:* ${cliente.notas}` : ''}
                     onChange={manejarCambio}
                     rows={3}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent"
+                    style={{
+                      color: '#111827',
+                      backgroundColor: '#ffffff',
+                      WebkitTextFillColor: '#111827',
+                      opacity: 1
+                    }}
                     placeholder="Instrucciones especiales, referencias de ubicación, horarios de entrega..."
                     maxLength={500}
                   />
@@ -506,108 +639,42 @@ ${cliente.notas ? `📝 *Notas:* ${cliente.notas}` : ''}
                       Procesando pedido...
                     </>
                   ) : (
-                    'Confirmar Pedido'
+                    mostrandoAdvertencia ? 'Confirmar Pedido' : 'Realizar Pedido'
                   )}
                 </button>
-
-                {/* Información de seguridad */}
-                <div className="text-center">
-                  <div className="inline-flex items-center gap-2 text-sm text-gray-500 bg-gray-50 px-4 py-2 rounded-full">
-                    <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    Información protegida y segura
-                  </div>
-                </div>
               </form>
-            </div>
-
+            </div>  
             {/* Resumen del pedido */}
-            <div className="bg-white rounded-lg shadow p-6 h-fit">
+            <div className="bg-white rounded-lg shadow p-6">
               <h2 className="text-xl font-semibold mb-6">Resumen del Pedido</h2>
-              
-              <div className="space-y-4 mb-6">
-                {state.items.map((item) => (
-                  <div key={item.id} className="flex gap-3">
-                    <div className="w-16 h-16 bg-gray-200 rounded flex items-center justify-center flex-shrink-0">
-                      <span className="text-2xl">👕</span>
-                    </div>
-                    <div className="flex-1">
-                      <h3 className="font-medium text-sm">{item.nombre}</h3>
-                      <p className="text-xs text-gray-600">{item.color} • {item.talla}</p>
-                      <p className="text-sm">
-                        Cantidad: {item.cantidad} x ${item.precio.toLocaleString()}
+              <div className="space-y-4"> 
+                {state.items.map(item => (
+                  <div key={`${item.producto_id}-${item.color}-${item.talla}`} className="flex justify-between items-center">
+                    <div>
+                      <p className="font-medium text-gray-900">{item.nombre}</p>
+                      <p className="text-sm text-gray-600">
+                        Color: {item.color} | Talla: {item.talla} | Cantidad: {item.cantidad}
                       </p>
                     </div>
-                    <div className="text-right">
-                      <p className="font-semibold">${(item.precio * item.cantidad).toLocaleString()}</p>
-                    </div>
+                    <p className="font-medium text-gray-900">   
+                      ${ (item.precio * item.cantidad).toLocaleString() }
+                    </p>
+                  </div>  
+                ))}   
+                <div className="border-t pt-4">
+                  <div className="flex justify-between items-center">
+                    <span className="font-semibold text-gray-900">Total:</span>   
+                    <span className="text-xl font-bold text-gray-900">
+                      ${ state.total.toLocaleString() }
+                    </span>   
                   </div>
-                ))}
-              </div>
-
-              <div className="border-t pt-4 space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span>Subtotal:</span>
-                  <span>${state.total.toLocaleString()}</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span>Envío:</span>
-                  <span className="text-gray-600">Por calcular</span>
-                </div>
-                <div className="flex justify-between text-lg font-bold border-t pt-2">
-                  <span>Total:</span>
-                  <span>${state.total.toLocaleString()}</span>
-                </div>
-              </div>
-
-              {/* Información adicional */}
-              <div className="mt-6 space-y-3">
-                <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-                  <div className="flex items-center gap-2 text-green-800">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                    </svg>
-                    <span className="text-sm font-medium">Calidad garantizada</span>
-                  </div>
-                  <p className="text-xs text-green-700 mt-1">
-                    Productos 100% algodón, resistentes y duraderos
+                  <p className="text-xs text-gray-500 mt-1">
+                    Incluye IVA y todos los impuestos aplicables
                   </p>
-                </div>
-
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                  <div className="flex items-center gap-2 text-blue-800">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10" />
-                    </svg>
-                    <span className="text-sm font-medium">Envíos a toda Colombia</span>
-                  </div>
-                  <p className="text-xs text-blue-700 mt-1">
-                    Tiempo de entrega: 3-5 días hábiles
-                  </p>
-                </div>
-
-                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
-                  <div className="flex items-center gap-2 text-yellow-800">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                    </svg>
-                    <span className="text-sm font-medium">Soporte por WhatsApp</span>
-                  </div>
-                  <p className="text-xs text-yellow-700 mt-1">
-                    Disponible de lunes a sábado, 8:00 AM - 6:00 PM
-                  </p>
-                </div>
+                </div>  
               </div>
-
-              <div className="mt-6 text-xs text-gray-500 space-y-1">
-                <p>• Los precios incluyen IVA</p>
-                <p>• El costo de envío se calculará según la ciudad</p>
-                <p>• Tiempo de procesamiento: 1-2 días hábiles</p>
-                <p>• Para cambios y devoluciones, consulta nuestras políticas</p>
-              </div>
-            </div>
-          </div>
+            </div>  
+          </div>  
         </div>
       </div>
     </div>
