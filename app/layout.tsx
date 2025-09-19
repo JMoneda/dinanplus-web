@@ -5,9 +5,10 @@ import { ToastProvider } from "@/context/ToastContext";
 import { CarritoProvider } from "@/context/CarritoContext";
 import CarritoSidebar from "@/components/CarritoSidebar";
 import BotonCarrito from "@/components/BotonCarrito";
+import MobileMenu from "@/components/MobileMenu";
 import { Metadata } from 'next';
 
-// SEO Optimizado - Metadata Base
+// ... (mantener toda la metadata existente)
 export const metadata: Metadata = {
   title: {
     default: "DINAN+ | Ropa Básica de Calidad - Camisetas y Chompas Colombia",
@@ -65,8 +66,6 @@ export const metadata: Metadata = {
   },
   verification: {
     google: 'your-google-verification-code',
-    // yandex: 'your-yandex-verification-code',
-    // yahoo: 'your-yahoo-verification-code',
   },
   alternates: {
     canonical: 'https://dinanplus-web.vercel.app/',
@@ -79,7 +78,7 @@ export const metadata: Metadata = {
   }
 };
 
-// Schema.org JSON-LD para SEO
+// Schemas JSON-LD (mantener todos los existentes)
 const organizationSchema = {
   "@context": "https://schema.org",
   "@type": "Organization",
@@ -211,6 +210,8 @@ export default function RootLayout({
                   <h1 className="text-2xl font-bold">
                     <Link href="/" aria-label="DINAN+ - Inicio">DINAN+</Link>
                   </h1>
+                  
+                  {/* NAVEGACIÓN DESKTOP - mantener */}
                   <nav className="hidden md:flex gap-6 text-sm font-medium" role="navigation" aria-label="Navegación principal">
                     <Link href="/" className="hover:text-gray-400 transition" aria-label="Página de inicio">
                       Inicio
@@ -222,7 +223,16 @@ export default function RootLayout({
                       Contacto
                     </Link>
                   </nav>
-                  <BotonCarrito />
+
+                  {/* NAVEGACIÓN MÓVIL - NUEVA SECCIÓN */}
+                  <div className="flex items-center gap-4">
+                    <BotonCarrito />
+                    
+                    {/* MENÚ HAMBURGUESA MÓVIL */}
+                    <div className="md:hidden">
+                      <MobileMenu />
+                    </div>
+                  </div>
                 </div>
               </header>
 

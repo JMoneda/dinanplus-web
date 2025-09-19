@@ -1,4 +1,6 @@
 import { Metadata } from 'next';
+import Link from 'next/link';
+import ProductImageOptimized from '@/components/ProductImageOptimized';
 
 // SEO específico para la página de inicio
 export const metadata: Metadata = {
@@ -67,6 +69,46 @@ const homepageSchema = {
   }
 };
 
+// PRODUCTOS POPULARES - CONECTADOS AL SISTEMA REAL
+const productosPopulares = [
+  { 
+    id: 1, 
+    nombre: 'Camiseta DINAN+ Hombre', 
+    descripcion: '100% algodón, perfecta para el día a día',
+    precio: 45000,
+    categoria: 'camiseta',
+    colores: ['Negro', 'Verde', 'Marfil', 'Mocca'],
+    tallas: ['S', 'M', 'L', 'XL', 'XXL']
+  },
+  { 
+    id: 2, 
+    nombre: 'Camiseta DINAN+ Dama', 
+    descripcion: 'Corte femenino, suave y resistente',
+    precio: 42000,
+    categoria: 'camiseta',
+    colores: ['Negro', 'Verde', 'Marfil', 'Mocca'],
+    tallas: ['XS', 'S', 'M', 'L', 'XL']
+  },
+  { 
+    id: 3, 
+    nombre: 'Chompa DINAN+ Hombre', 
+    descripcion: 'Abrigadora y versátil para cualquier ocasión',
+    precio: 85000,
+    categoria: 'chompa',
+    colores: ['Negro', 'Verde', 'Marfil', 'Mocca'],
+    tallas: ['S', 'M', 'L', 'XL', 'XXL']
+  },
+  { 
+    id: 4, 
+    nombre: 'Chompa DINAN+ Dama', 
+    descripción: 'Elegante y cómoda, ideal para cualquier look',
+    precio: 82000,
+    categoria: 'chompa',
+    colores: ['Negro', 'Verde', 'Marfil', 'Mocca'],
+    tallas: ['XS', 'S', 'M', 'L', 'XL']
+  }
+]
+
 export default function Home() {
   return (
     <>
@@ -101,7 +143,7 @@ export default function Home() {
             <div className="bg-white p-6 rounded-lg shadow-sm">
               <h3 className="font-bold text-gray-900 mb-2">🌟 Calidad Premium</h3>
               <p className="text-gray-700 text-sm">
-                Prendas 100% algodón de alta calidad. Resistentes, cómodas y duraderas.
+                Prendas 100% algodón de alta calidad, suave al tacto y duradero
               </p>
             </div>
             
@@ -130,20 +172,20 @@ export default function Home() {
         
         {/* CTA buttons optimizados */}
         <div className="mt-8 flex gap-4 flex-col sm:flex-row">
-          <a
+          <Link
             href="/catalogo"
             className="px-8 py-4 bg-black text-white rounded-full font-medium hover:bg-gray-800 transition text-lg"
             aria-label="Ver catálogo completo de productos DINAN+"
           >
             Ver Catálogo Completo
-          </a>
-          <a
+          </Link>
+          <Link
             href="/contacto"
             className="px-8 py-4 bg-gray-200 text-black rounded-full font-medium hover:bg-gray-300 transition text-lg"
             aria-label="Contactar con DINAN+ para más información"
           >
             Contactar Ahora
-          </a>
+          </Link>
         </div>
         
         {/* Información adicional para SEO local */}
@@ -169,7 +211,7 @@ export default function Home() {
         </div>
       </section>
       
-      {/* Sección de productos destacados */}
+      {/* Sección de productos destacados - CONECTADA AL SISTEMA REAL */}
       <section className="py-16 bg-white">
         <div className="container mx-auto px-6 text-center">
           <h2 className="text-3xl font-bold text-gray-900 mb-4">
@@ -179,29 +221,149 @@ export default function Home() {
             Descubre por qué miles de colombianos confían en DINAN+ para su ropa básica diaria
           </p>
           
-          {/* Grid de productos destacados */}
+          {/* Grid de productos destacados CON IMÁGENES REALES */}
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
-            {[
-              { name: "Camiseta DINAN+ Hombre", desc: "100% algodón, perfecta para el día a día", img: "camiseta-hombre" },
-              { name: "Camiseta DINAN+ Dama", desc: "Corte femenino, suave y resistente", img: "camiseta-dama" }, 
-              { name: "Chompa DINAN+ Hombre", desc: "Abrigadora y versátil para cualquier ocasión", img: "chompa-hombre" },
-              { name: "Chompa DINAN+ Dama", desc: "Elegante y cómoda, ideal para cualquier look", img: "chompa-dama" }
-            ].map((producto, index) => (
-              <article key={index} className="text-center group">
-                <div className="bg-gray-100 w-full h-48 rounded-lg mb-4 flex items-center justify-center group-hover:bg-gray-200 transition">
-                  <span className="text-4xl">👕</span>
-                </div>
-                <h3 className="font-semibold text-gray-900 mb-2">{producto.name}</h3>
-                <p className="text-sm text-gray-600 mb-3">{producto.desc}</p>
-                <a 
-                  href="/catalogo" 
-                  className="text-black font-medium hover:underline"
-                  aria-label={`Ver más detalles de ${producto.name}`}
+            {productosPopulares.map((producto, index) => (
+              <article key={producto.id} className="text-center group">
+                <Link 
+                  href="/catalogo"
+                  className="block"
+                  aria-label={`Ver ${producto.nombre} en el catálogo`}
                 >
-                  Ver Detalles →
-                </a>
+                  {/* IMAGEN REAL DEL PRODUCTO */}
+                  <div className="relative mb-4 group-hover:scale-105 transition-transform duration-300">
+                    <ProductImageOptimized
+                      productoId={producto.id}
+                      nombreProducto={producto.nombre}
+                      colorSeleccionado={producto.colores[0]} // Color por defecto
+                      coloresDisponibles={producto.colores}
+                      className="mx-auto"
+                      size="medium"
+                      showColorIndicator={true}
+                      priority={index === 0} // Prioridad para el primer producto
+                    />
+                    
+                    {/* Badge de precio - REPOSICIONADO */}
+                    <div className="absolute bottom-2 right-2 bg-black/80 backdrop-blur-sm text-white px-3 py-1 rounded-full text-sm font-semibold shadow-lg">
+                      ${producto.precio.toLocaleString()}
+                    </div>
+                  </div>
+                  
+                  <h3 className="font-semibold text-gray-900 mb-2">{producto.nombre}</h3>
+                  <p className="text-sm text-gray-600 mb-3">{producto.descripcion}</p>
+                  
+                  {/* Información adicional */}
+                  <div className="text-xs text-gray-500 space-y-1">
+                    <p>
+                      <strong>Colores:</strong> {producto.colores.length} opciones
+                    </p>
+                    <p>
+                      <strong>Tallas:</strong> {producto.tallas.join(', ')}
+                    </p>
+                  </div>
+                  
+                  <div className="mt-3 text-black font-medium hover:underline group-hover:text-gray-600 transition-colors">
+                    Ver Detalles →
+                  </div>
+                </Link>
               </article>
             ))}
+          </div>
+          
+          {/* CTA para ver todo el catálogo */}
+          <div className="mt-12">
+            <Link
+              href="/catalogo"
+              className="inline-flex items-center px-8 py-4 bg-black text-white rounded-full font-semibold hover:bg-gray-800 transition text-lg"
+              aria-label="Ver catálogo completo de DINAN+"
+            >
+              Ver Todo el Catálogo
+              <svg className="ml-2 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+              </svg>
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* Sección de características destacadas */}
+      <section className="bg-gray-50 py-16">
+        <div className="container mx-auto px-6">
+          <h2 className="text-3xl font-bold text-center text-gray-900 mb-12">¿Por Qué Elegir DINAN+?</h2>
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
+            <article className="text-center">
+              <div className="w-16 h-16 bg-black rounded-full flex items-center justify-center mx-auto mb-4">
+                <span className="text-white font-bold text-2xl">✓</span>
+              </div>
+              <h3 className="font-semibold mb-2">100% Algodón Premium</h3>
+              <p className="text-gray-600 text-sm">Material de la más alta calidad, suave al tacto y duradero</p>
+            </article>
+            <article className="text-center">
+              <div className="w-16 h-16 bg-black rounded-full flex items-center justify-center mx-auto mb-4">
+                <span className="text-white font-bold text-2xl">🚚</span>
+              </div>
+              <h3 className="font-semibold mb-2">Envíos a Toda Colombia</h3>
+              <p className="text-gray-600 text-sm">Llevamos nuestros productos a cualquier ciudad del país</p>
+            </article>
+            <article className="text-center">
+              <div className="w-16 h-16 bg-black rounded-full flex items-center justify-center mx-auto mb-4">
+                <span className="text-white font-bold text-2xl">📏</span>
+              </div>
+              <h3 className="font-semibold mb-2">Tallas S a XXL</h3>
+              <p className="text-gray-600 text-sm">Ropa básica para todos los cuerpos y estilos</p>
+            </article>
+            <article className="text-center">
+              <div className="w-16 h-16 bg-black rounded-full flex items-center justify-center mx-auto mb-4">
+                <span className="text-white font-bold text-2xl">⭐</span>
+              </div>
+              <h3 className="font-semibold mb-2">Calidad Garantizada</h3>
+              <p className="text-gray-600 text-sm">Prendas resistentes que mantienen su forma lavada tras lavada</p>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      {/* Redes sociales SEO optimizadas */}
+      <section className="bg-black text-white py-20">
+        <div className="container mx-auto px-6 text-center">
+          <div className="bg-white text-black inline-block px-8 py-4 rounded-lg mb-8">
+            <h2 className="text-2xl font-bold italic">¡Síguenos en Redes!</h2>
+          </div>
+          <p className="text-xl mb-8">
+            Únete a nuestra comunidad DINAN+<br />
+            Miles de colombianos ya confían en nosotros
+          </p>
+          <div className="space-y-4 max-w-md mx-auto">
+            <a
+              href="https://instagram.com/dinanbasic"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center justify-center bg-pink-600 hover:bg-pink-700 text-white py-3 px-6 rounded-full transition"
+              aria-label="Síguenos en Instagram @dinanbasic"
+            >
+              <span className="mr-3">Instagram 📱</span>
+              @dinanbasic
+            </a>
+            <a
+              href="https://tiktok.com/@dinanbasic"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center justify-center bg-gray-800 hover:bg-gray-900 text-white py-3 px-6 rounded-full transition"
+              aria-label="Síguenos en TikTok @dinanbasic"
+            >
+              <span className="mr-3">TikTok 🎵</span>
+              @dinanbasic
+            </a>
+            <a
+              href="https://wa.me/573243893455"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center justify-center bg-green-600 hover:bg-green-700 text-white py-3 px-6 rounded-full transition"
+              aria-label="Contáctanos por WhatsApp"
+            >
+              <span className="mr-3">WhatsApp 💬</span>
+              324 389 3455
+            </a>
           </div>
         </div>
       </section>
