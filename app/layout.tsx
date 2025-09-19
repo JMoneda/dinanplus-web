@@ -86,7 +86,7 @@ const organizationSchema = {
   "name": "DINAN+",
   "description": "Ropa básica de alta calidad en Colombia",
   "url": "https://dinanplus-web.vercel.app/",
-  "logo": "https://dinanplus-web.vercel.app//logo.jpg",
+  "logo": "https://dinanplus-web.vercel.app/logo.jpg",
   "contactPoint": {
     "@type": "ContactPoint",
     "telephone": "+57-324-389-3455",
@@ -113,7 +113,7 @@ const websiteSchema = {
   "url": "https://dinanplus-web.vercel.app/",
   "potentialAction": {
     "@type": "SearchAction",
-    "target": "https://dinanplus-web.vercel.app//catalogo?q={search_term_string}",
+    "target": "https://dinanplus-web.vercel.app/catalogo?q={search_term_string}",
     "query-input": "required name=search_term_string"
   }
 };

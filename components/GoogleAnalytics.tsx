@@ -1,13 +1,11 @@
 // components/GoogleAnalytics.tsx
-// Google Analytics 4 para métricas
+// Google Analytics 4 para métricas SEO
 'use client'
 import Script from 'next/script'
 
-const GA_TRACKING_ID = process.env.NEXT_PUBLIC_GA_ID
+const GA_TRACKING_ID = process.env.NEXT_PUBLIC_GA_ID || 'G-XXXXXXXXXX'
 
 export default function GoogleAnalytics() {
-  if (!GA_TRACKING_ID) return null
-
   return (
     <>
       <Script

@@ -17,7 +17,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "DINAN+ | Ropa Básica de Calidad en Colombia",
     description: "La mejor ropa básica de Colombia. Camisetas, chompas y prendas versátiles 100% algodón. Calidad garantizada.",
-    url: "https://dinanplus-web.vercel.app",
+    url: "https://dinanplus-web.vercel.app/",
     images: [
       {
         url: "/og-home.jpg",
@@ -28,7 +28,7 @@ export const metadata: Metadata = {
     ],
   },
   alternates: {
-    canonical: "https://dinanplus-web.vercel.app",
+    canonical: "https://dinanplus-web.vercel.app/",
   },
 };
 
@@ -38,7 +38,7 @@ const homepageSchema = {
   "@type": "WebPage",
   "name": "DINAN+ - Ropa Básica de Calidad",
   "description": "Ropa básica de alta calidad en Colombia. Camisetas, chompas y prendas versátiles.",
-  "url": "https://dinanplus-web.vercel.app",
+  "url": "https://dinanplus-web.vercel.app/",
   "mainEntity": {
     "@type": "ItemList",
     "name": "Categorías de Productos DINAN+",
@@ -152,7 +152,7 @@ export default function Home() {
             <strong>DINAN+</strong> - Marca colombiana líder en ropa básica de calidad
           </p>
           <p className="text-xs text-gray-500">
-            Con sede en Caldas, Antioquia. Atendemos clientes en Bogotá, Cali, Barranquilla, Cartagena y toda Colombia.
+            Con sede en Medellín, Antioquia. Atendemos clientes en Bogotá, Cali, Barranquilla, Cartagena y toda Colombia.
           </p>
         </div>
         
@@ -160,9 +160,9 @@ export default function Home() {
         <div itemScope itemType="https://schema.org/Organization" className="hidden">
           <span itemProp="name">DINAN+</span>
           <span itemProp="description">Ropa básica de calidad premium en Colombia</span>
-          <span itemProp="url">https://dinanplus-web.vercel.app</span>
+          <span itemProp="url">https://dinanplus-web.vercel.app/</span>
           <div itemProp="address" itemScope itemType="https://schema.org/PostalAddress">
-            <span itemProp="addressLocality">Caldas</span>
+            <span itemProp="addressLocality">Medellín</span>
             <span itemProp="addressRegion">Antioquia</span>
             <span itemProp="addressCountry">Colombia</span>
           </div>
