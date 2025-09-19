@@ -110,7 +110,7 @@ Enviado desde dinanplus.com
                   name="tipoConsulta"
                   value={formulario.tipoConsulta}
                   onChange={manejarCambio}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent"
+                  className="w-full px-4 py-3 border border-gray-600 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent"
                 >
                   <option value="general">Consulta general</option>
                   <option value="pedido">Estado de pedido</option>
@@ -132,7 +132,7 @@ Enviado desde dinanplus.com
                   value={formulario.nombre}
                   onChange={manejarCambio}
                   required
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent"
+                  className="w-full px-4 py-3 border border-gray-600 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent"
                   placeholder="Tu nombre completo"
                 />
               </div>
